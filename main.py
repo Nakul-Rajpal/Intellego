@@ -6,13 +6,25 @@ import os
 import threading
 from happytransformer import HappyTextToText, TTSettings
 
-#model = PunctuationModel()
+stop_recording = False
+verbose = False
+
+
+def check_similarity(spoken, correct):
+    correct_lower = correct.lower()
+    correct_lower = correct_lower.replace(',', '').replace('.', '').replace(":", '')
+    return {
+        "spoken": spoken,
+        "correct": correct,
+        "is_correct": correct_lower == spoken.lower()
+    }
 
 
 def record_audio(samplerate=16000):
     # Initialize an empty list to hold the recording frames
     recording_frames = []
     # Flag to control the recording status
+    print("Loading recorder...")
     is_recording = threading.Event()
     is_recording.set()
 
@@ -27,6 +39,7 @@ def record_audio(samplerate=16000):
     with sd.InputStream(samplerate=samplerate, channels=1, dtype='float32', callback=callback):
         input("Press Enter to stop recording...")
         # When Enter is pressed, clear the recording flag to stop the callback
+        stop_recording = True
         is_recording.clear()
 
     # Concatenate all recorded frames
@@ -39,68 +52,53 @@ def play_audio(audio, samplerate=16000):
     sd.wait()  # Wait for playback to finish
 
 
-# Record audio
-audio_clip = record_audio()
+if __name__ == '__main__':
+    print("Starting Intellego")
+    # Record audio
 
-# Play back the recorded audio
-# print("Playing back the recorded audio...")
-# play_audio(audio_clip)
-
-
-wav_file = 'recorded_audio.wav'
-sf.write(wav_file, audio_clip, 16000)
-
-recognizer = sr.Recognizer()
-
-# Replace 'your_audio_file.wav' with the path to your audio file
-audio_file_path = 'recorded_audio.wav'
-
-# Use the audio file as the audio source
-with sr.AudioFile(audio_file_path) as source:
-    print("Reading audio file...")
-    # Adjust the recognizer sensitivity to ambient noise
-    recognizer.adjust_for_ambient_noise(source)
-    # Read the audio file
-    audio_data = recognizer.record(source)
-    print("Recognizing...")
-    try:
-        # Recognize the speech in the audio file
-        text = recognizer.recognize_google(audio_data)
-        print(f"Audio file said: {text}")
-    except sr.UnknownValueError:
-        print("Google Speech Recognition could not understand the audio")
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
-
-#Grammer correction
-#result = model.restore_punctuation(text)
-#result = result.replace(',', '').replace('.', '').replace(":",'')
-#print(result)
-
-happy_tt = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
-
-args = TTSettings(num_beams=5, min_length=1)
-
-# Add the prefix "grammar: " before each input 
-result = happy_tt.generate_text("grammar: " + text, args=args)
-correct = result.text
-incorrect = text
-
-def alert(incorrect, correct):
-    correctc = correct.lower()
-    correctc = correct.replace(',', '').replace('.', '').replace(":",'')
-    if correctc == incorrect:
-        return {"Spoken": incorrect,
-                "Corrected Sentence": correct,
-                "Correct": False}
+    print("Initializing HappyTextToText")
+    model_dir = "model"
+    if os.path.exists(model_dir) and os.path.isdir(model_dir):
+        happy_tt = HappyTextToText(model_type="T5", model_name="model/")
     else:
-        return {"Spoken": incorrect,
-                "Corrected Sentence": correct,
-                "Corrected": True}
+        os.mkdir(model_dir)
+        happy_tt = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
+        happy_tt.save("model/")
+    print("Done initializing HappyTextToText")
 
-print(result.text) # This sentence has bad grammar.
+    stop_recording = False
+    while not stop_recording:
+        audio_clip = record_audio()
 
-with open("output_file.txt", "w") as file:
-    file.write("Correct Grammar: " + result.text + "\nIncorrect Grammar: " + text)
-answer = alert(incorrect, correct)
-print(answer)
+        # Play back the recorded audio
+        # print("Playing back the recorded audio...")
+        # play_audio(audio_clip)
+
+        audio_file_path = "recorded_audio.wav"
+        sf.write(audio_file_path, audio_clip, 16000)
+
+        recognizer = sr.Recognizer()
+        # Replace 'your_audio_file.wav' with the path to your audio file
+        # Use the audio file as the audio source
+        with sr.AudioFile(audio_file_path) as source:
+            if verbose: print("Reading audio file...")
+            # Adjust the recognizer sensitivity to ambient noise
+            recognizer.adjust_for_ambient_noise(source)
+            # Read the audio file
+            audio_data = recognizer.record(source)
+            if verbose: print("Recognizing...")
+            try:
+                # Recognize the speech in the audio file
+                text = recognizer.recognize_google(audio_data)
+                if verbose: print(f"Audio file said: {text}")
+            except sr.UnknownValueError:
+                print("Google Speech Recognition could not understand the audio")
+            except sr.RequestError as e:
+                print(f"Could not request results from Google Speech Recognition service; {e}")
+
+        args = TTSettings(num_beams=5, min_length=1)
+
+        # Add the prefix "grammar: " before each input
+        result = happy_tt.generate_text("grammar: " + text, args=args)
+        similarity = check_similarity(text, result.text)
+        print(similarity)
