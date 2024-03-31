@@ -72,7 +72,26 @@ with sr.AudioFile(audio_file_path) as source:
     except sr.RequestError as e:
         print(f"Could not request results from Google Speech Recognition service; {e}")
 
+<<<<<<< Updated upstream:main.py
 # Grammer correction
 result = model.restore_punctuation(text)
 result = result.replace(',', '').replace('.', '').replace(":", '')
 print(result)
+=======
+#Grammer correction
+#result = model.restore_punctuation(text)
+#result = result.replace(',', '').replace('.', '').replace(":",'')
+#print(result)
+
+happy_tt = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
+
+args = TTSettings(num_beams=5, min_length=1)
+
+# Add the prefix "grammar: " before each input 
+result = happy_tt.generate_text("grammar: " + text, args=args)
+
+print(result.text) # This sentence has bad grammar.
+
+with open("output_file.txt", "w") as file:
+    file.write("Correct Grammar: " + result.text + "\nIncorrect Grammar: " + text)
+>>>>>>> Stashed changes:record.py
