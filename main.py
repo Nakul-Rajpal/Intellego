@@ -4,10 +4,9 @@ import sounddevice as sd
 import numpy as np
 import os
 import threading
-from deepmultilingualpunctuation import PunctuationModel
 from happytransformer import HappyTextToText, TTSettings
 
-model = PunctuationModel()
+#model = PunctuationModel()
 
 
 def record_audio(samplerate=16000):
@@ -84,8 +83,24 @@ args = TTSettings(num_beams=5, min_length=1)
 
 # Add the prefix "grammar: " before each input 
 result = happy_tt.generate_text("grammar: " + text, args=args)
+correct = result.text
+incorrect = text
+
+def alert(incorrect, correct):
+    correctc = correct.lower()
+    correctc = correct.replace(',', '').replace('.', '').replace(":",'')
+    if correctc == incorrect:
+        return {"Spoken": incorrect,
+                "Corrected Sentence": correct,
+                "Correct": False}
+    else:
+        return {"Spoken": incorrect,
+                "Corrected Sentence": correct,
+                "Corrected": True}
 
 print(result.text) # This sentence has bad grammar.
 
 with open("output_file.txt", "w") as file:
     file.write("Correct Grammar: " + result.text + "\nIncorrect Grammar: " + text)
+answer = alert(incorrect, correct)
+print(answer)
