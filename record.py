@@ -6,6 +6,7 @@ import numpy as np
 import os
 import threading
 from deepmultilingualpunctuation import PunctuationModel
+from happytransformer import HappyTextToText, TTSettings
 
 model = PunctuationModel()
 
@@ -72,8 +73,16 @@ with sr.AudioFile(audio_file_path) as source:
         print(f"Could not request results from Google Speech Recognition service; {e}")
 
 #Grammer correction
-result = model.restore_punctuation(text)
-result = result.replace(',', '').replace('.', '').replace(":",'')
-print(result)
+#result = model.restore_punctuation(text)
+#result = result.replace(',', '').replace('.', '').replace(":",'')
+#print(result)
 
+happy_tt = HappyTextToText("T5", "vennify/t5-base-grammar-correction")
+
+args = TTSettings(num_beams=5, min_length=1)
+
+# Add the prefix "grammar: " before each input 
+result = happy_tt.generate_text("grammar: " + text, args=args)
+
+print(result.text) # This sentence has bad grammar.
 
