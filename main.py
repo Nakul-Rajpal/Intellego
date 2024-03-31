@@ -5,9 +5,11 @@ import numpy as np
 import os
 import threading
 from happytransformer import HappyTextToText, TTSettings
+import time
 
 stop_recording = False
 verbose = False
+wait_time = 5
 
 
 def check_similarity(spoken, correct):
@@ -37,9 +39,7 @@ def record_audio(samplerate=16000):
 
     # Start recording in a non-blocking manner
     with sd.InputStream(samplerate=samplerate, channels=1, dtype='float32', callback=callback):
-        input("Press Enter to stop recording...")
-        # When Enter is pressed, clear the recording flag to stop the callback
-        stop_recording = True
+        time.sleep(wait_time)
         is_recording.clear()
 
     # Concatenate all recorded frames
@@ -100,5 +100,13 @@ if __name__ == '__main__':
 
         # Add the prefix "grammar: " before each input
         result = happy_tt.generate_text("grammar: " + text, args=args)
-        similarity = check_similarity(text, result.text)
-        print(similarity)
+        if text == "stop" or text == "stop recording":
+            print("User stopped recording")
+            break
+        else:
+            similarity = check_similarity(text, result.text)
+
+            if similarity["is_correct"]:
+                print("{} ✅".format(similarity["correct"]))
+            else:
+                print("{} ❌ {} ✅".format(similarity["spoken"], similarity["correct"]))
