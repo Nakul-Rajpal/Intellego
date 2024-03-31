@@ -5,6 +5,7 @@ import numpy as np
 import os
 import threading
 from deepmultilingualpunctuation import PunctuationModel
+from happytransformer import HappyTextToText, TTSettings
 
 model = PunctuationModel()
 
@@ -72,12 +73,6 @@ with sr.AudioFile(audio_file_path) as source:
     except sr.RequestError as e:
         print(f"Could not request results from Google Speech Recognition service; {e}")
 
-<<<<<<< Updated upstream:main.py
-# Grammer correction
-result = model.restore_punctuation(text)
-result = result.replace(',', '').replace('.', '').replace(":", '')
-print(result)
-=======
 #Grammer correction
 #result = model.restore_punctuation(text)
 #result = result.replace(',', '').replace('.', '').replace(":",'')
@@ -94,4 +89,3 @@ print(result.text) # This sentence has bad grammar.
 
 with open("output_file.txt", "w") as file:
     file.write("Correct Grammar: " + result.text + "\nIncorrect Grammar: " + text)
->>>>>>> Stashed changes:record.py
